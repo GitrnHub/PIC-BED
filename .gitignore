@@ -1,0 +1,19 @@
+# Dependencies and build output
+node_modules/
+dist/
+
+# Cloudflare local state and generated deployment artifacts
+.wrangler/
+.dev.vars
+.dev.vars.*
+worker-configuration.d.ts
+
+# Generic local secrets
+.env
+.env.*
+
+# Logs and editor noise
+*.log
+.DS_Store
+Thumbs.db
+
