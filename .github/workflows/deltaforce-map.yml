@@ -8,35 +8,94 @@ on:
         required: true
         type: string
       workers:
-        default: "16"
+        default: "24"
         required: true
         type: string
-      only_layers:
-        default: ""
-        required: false
-        type: string
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/deltaforce-map.yml"
+      - "tools/deltaforce-map/downloader.py"
 
 permissions:
   contents: read
 
+concurrency:
+  group: delta-force-map-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   export:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 10
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        layer:
+          - map_db
+          - map_yc
+          - map_yc2
+          - map_htjd
+          - map_htjd2
+          - map_bks2
+          - map_cxjy
+          - daba_0f
+          - daba_1f
+          - daba_2f
+          - cgxg_1f
+          - cgxg_2f
+          - bks_1f
+          - bks_2f
+          - bks_3f
+          - cxjy_1f
+          - cxjy_2f
+          - cxjy_3f
+          - cxjy_4f
+          - map_pc
+          - map_ljd
+          - map_gc
+          - map_jq
+          - map_qhz
+          - map_df
+          - map_dg
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - run: pip install requests pillow
-      - name: Download and stitch
+      - name: Export ${{ matrix.layer }}
+        env:
+          MAX_ZOOM: ${{ inputs.max_zoom || '6' }}
+          WORKERS: ${{ inputs.workers || '24' }}
         run: |
           python tools/deltaforce-map/downloader.py \
-            --max-zoom "${{ inputs.max_zoom }}" \
-            --workers "${{ inputs.workers }}" \
-            --only-layers "${{ inputs.only_layers }}"
+            --max-zoom "$MAX_ZOOM" \
+            --workers "$WORKERS" \
+            --only-layers "${{ matrix.layer }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: df-${{ matrix.layer }}
+          path: output/
+          if-no-files-found: warn
+          retention-days: 7
+
+  bundle:
+    if: always()
+    needs: export
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: df-*
+          path: bundle
+          merge-multiple: true
       - uses: actions/upload-artifact@v4
         with:
-          name: delta-force-maps-${{ github.run_number }}
-          path: output/
+          name: delta-force-full-maps-${{ github.run_number }}
+          path: bundle/
           retention-days: 7
