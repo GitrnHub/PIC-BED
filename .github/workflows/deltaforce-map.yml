@@ -1,0 +1,42 @@
+name: Delta Force Full Map Export
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_zoom:
+        default: "6"
+        required: true
+        type: string
+      workers:
+        default: "16"
+        required: true
+        type: string
+      only_layers:
+        default: ""
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests pillow
+      - name: Download and stitch
+        run: |
+          python tools/deltaforce-map/downloader.py \
+            --max-zoom "${{ inputs.max_zoom }}" \
+            --workers "${{ inputs.workers }}" \
+            --only-layers "${{ inputs.only_layers }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: delta-force-maps-${{ github.run_number }}
+          path: output/
+          retention-days: 7
